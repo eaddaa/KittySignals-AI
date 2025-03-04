@@ -6,7 +6,8 @@ import useWalletConnection from '@/hooks/useWalletConnection';
 import { REQUIRED_TOKEN_BALANCE, TOKEN_CONTRACT } from '@/config/network';
 import { ethers } from 'ethers';
 
-export type TradingPair = 'BTC/USDT' | 'ETH/USDT' | 'SOL/USDT' | 'BNB/USDT' | 'XRP/USDT' | 'ADA/USDT' | 'TIA/USDT' | 'DYM/USDT' | 'GOAT/USDT' | 'ATOM/USDT' | 'CVP/USDT' | 'RIZ/USDT';
+export type TradingPair = 'BTC/USDT' | 'ETH/USDT' | 'SOL/USDT' | 'BNB/USDT' | 'XRP/USDT' | 'ADA/USDT' | 'TIA/USDT' | 'DYM/USDT' | 'GOAT/USDT' | 'ATOM/USDT' | 'CVP/USDT' | 'RIZ/USDT' | 'DOGE/USDT' | 'DOT/USDT' | 'SHIB/USDT' | 'AVAX/USDT' | 'MATIC/USDT' | 'LINK/USDT' | 'TRX/USDT' | 'UNI/USDT' | 'TON/USDT' | 'ICP/USDT' | 'INJ/USDT' | 'APE/USDT' | 'SUI/USDT' | 'LTC/USDT' | 'BCH/USDT' | 'NEAR/USDT' | 'FIL/USDT' | 'ARB/USDT';
+
 export type Strategy = 'MACD' | 'RSI' | 'Moving Average' | 'Bollinger Bands' | 'Fibonacci Retracement' | 'Stochastic Oscillator' | 'Relative Vigor Index' | 'Parabolic SAR' | 'Ichimoku Cloud' | 'Williams %R';
 export type Signal = 'BUY' | 'SELL' | 'HOLD';
 
@@ -55,7 +56,7 @@ const TradingContext = createContext<TradingContextType | undefined>(undefined);
 export const TradingProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [selectedPair, setSelectedPair] = useState<TradingPair>('BTC/USDT');
   const [selectedStrategy, setSelectedStrategy] = useState<Strategy>('MACD');
-  const [riskLevel, setRiskLevel] = useState(5);
+  const [riskLevel, setRiskLevel] = useState(10); // Changed from 5 to 10
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [hasRequiredTokens, setHasRequiredTokens] = useState(false);

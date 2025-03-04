@@ -22,7 +22,12 @@ const TradingDashboard = () => {
   const tradingPairs = [
     'BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT', 
     'XRP/USDT', 'ADA/USDT', 'TIA/USDT', 'DYM/USDT', 
-    'GOAT/USDT', 'ATOM/USDT', 'CVP/USDT', 'RIZ/USDT'
+    'DOGE/USDT', 'DOT/USDT', 'SHIB/USDT', 'AVAX/USDT',
+    'MATIC/USDT', 'LINK/USDT', 'TRX/USDT', 'UNI/USDT',
+    'TON/USDT', 'ICP/USDT', 'INJ/USDT', 'APE/USDT',
+    'SUI/USDT', 'LTC/USDT', 'BCH/USDT', 'NEAR/USDT',
+    'FIL/USDT', 'ARB/USDT', 'GOAT/USDT', 'ATOM/USDT', 
+    'CVP/USDT', 'RIZ/USDT'
   ];
   
   const strategies = [
@@ -114,7 +119,7 @@ const TradingDashboard = () => {
               <label className="block text-sm font-medium mb-2">
                 Trading Pair
               </label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
                 {tradingPairs.map((pair) => (
                   <button
                     key={pair}

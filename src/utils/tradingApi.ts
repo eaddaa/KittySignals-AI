@@ -1,4 +1,3 @@
-
 import { TradingPair, Strategy, Signal } from "@/context/TradingContext";
 
 interface PriceData {
@@ -30,10 +29,28 @@ const fetchRealPriceData = async (pair: TradingPair): Promise<PriceData[]> => {
       'btc': 'bitcoin',
       'ada': 'cardano',
       'tia': 'celestia',
-      'goat': 'goatseus-maximus', // Doğru CoinGecko ID: goatseus-maximus
+      'goat': 'goatseus-maximus',
       'atom': 'cosmos',
-      'cvp': 'concentrated-voting-power', // Doğru CoinGecko ID: concentrated-voting-power
-      'riz': 'rivalz-network' // Doğru CoinGecko ID: rivalz-network
+      'cvp': 'concentrated-voting-power',
+      'riz': 'rivalz-network',
+      'doge': 'dogecoin',
+      'dot': 'polkadot',
+      'shib': 'shiba-inu',
+      'avax': 'avalanche-2',
+      'matic': 'matic-network',
+      'link': 'chainlink',
+      'trx': 'tron',
+      'uni': 'uniswap',
+      'ton': 'the-open-network',
+      'icp': 'internet-computer',
+      'inj': 'injective-protocol',
+      'ape': 'apecoin',
+      'sui': 'sui',
+      'ltc': 'litecoin',
+      'bch': 'bitcoin-cash',
+      'near': 'near',
+      'fil': 'filecoin',
+      'arb': 'arbitrum'
     };
     
     const coinId = coinGeckoIdMap[baseCurrency];
@@ -51,15 +68,13 @@ const fetchRealPriceData = async (pair: TradingPair): Promise<PriceData[]> => {
     
     const data = await response.json();
     
-    // API'den gelen verileri en eski tarih solda, en yeni tarih sağda olacak şekilde sırala
     const sortedPrices = data.prices.map((priceData: [number, number]) => {
       return {
         time: priceData[0],
         close: priceData[1]
       };
-    }).sort((a, b) => a.time - b.time); // Tarihe göre sırala (en eski tarih solda)
+    }).sort((a, b) => a.time - b.time);
     
-    // Fiyat verilerini işle
     const priceData: PriceData[] = sortedPrices.map((price, index) => {
       const open = index > 0 ? sortedPrices[index - 1].close : price.close * (1 - (Math.random() * 0.01));
       const close = price.close;
@@ -83,7 +98,7 @@ const fetchRealPriceData = async (pair: TradingPair): Promise<PriceData[]> => {
     return priceData;
   } catch (error) {
     console.error('Error fetching price data:', error);
-    throw error; // Hata durumunda mock veriye dönmek yerine hatayı fırlat
+    throw error;
   }
 };
 
@@ -140,6 +155,81 @@ const generateMockPriceData = (pair: TradingPair, days: number = 30): PriceData[
       basePrice = 0.1;
       volatilityFactor = 0.25;
       break;
+    case 'DOGE/USDT':
+      basePrice = 0.15;
+      volatilityFactor = 0.12;
+      break;
+    case 'DOT/USDT':
+      basePrice = 7;
+      volatilityFactor = 0.1;
+      break;
+    case 'SHIB/USDT':
+      basePrice = 0.000028;
+      volatilityFactor = 0.2;
+      break;
+    case 'AVAX/USDT':
+      basePrice = 32;
+      volatilityFactor = 0.13;
+      break;
+    case 'MATIC/USDT':
+      basePrice = 0.6;
+      volatilityFactor = 0.11;
+      break;
+    case 'LINK/USDT':
+      basePrice = 15;
+      volatilityFactor = 0.09;
+      break;
+    case 'TRX/USDT':
+      basePrice = 0.12;
+      volatilityFactor = 0.08;
+      break;
+    case 'UNI/USDT':
+      basePrice = 8;
+      volatilityFactor = 0.14;
+      break;
+    case 'TON/USDT':
+      basePrice = 5;
+      volatilityFactor = 0.16;
+      break;
+    case 'ICP/USDT':
+      basePrice = 12;
+      volatilityFactor = 0.17;
+      break;
+    case 'INJ/USDT':
+      basePrice = 35;
+      volatilityFactor = 0.18;
+      break;
+    case 'APE/USDT':
+      basePrice = 1.5;
+      volatilityFactor = 0.19;
+      break;
+    case 'SUI/USDT':
+      basePrice = 1.2;
+      volatilityFactor = 0.15;
+      break;
+    case 'LTC/USDT':
+      basePrice = 75;
+      volatilityFactor = 0.08;
+      break;
+    case 'BCH/USDT':
+      basePrice = 380;
+      volatilityFactor = 0.09;
+      break;
+    case 'NEAR/USDT':
+      basePrice = 4;
+      volatilityFactor = 0.14;
+      break;
+    case 'FIL/USDT':
+      basePrice = 5;
+      volatilityFactor = 0.13;
+      break;
+    case 'ARB/USDT':
+      basePrice = 1.2;
+      volatilityFactor = 0.16;
+      break;
+    default:
+      basePrice = 10;
+      volatilityFactor = 0.1;
   }
   
   let lastClose = basePrice;
@@ -231,7 +321,6 @@ export const fetchTradingData = async (
     };
   } catch (error) {
     console.error('Error fetching trading data:', error);
-    // API çağrısı başarısız olursa, mock veri ile devam et
     const mockPriceData = generateMockPriceData(pair);
     const signal = generateMockSignal(pair, strategy, riskLevel);
     const analysis = generateMockAnalysis(pair, strategy, signal);
@@ -239,7 +328,7 @@ export const fetchTradingData = async (
     return {
       signal,
       analysis,
-      confidence: 50, // Düşük güven seviyesi
+      confidence: 50,
       priceData: mockPriceData
     };
   }
