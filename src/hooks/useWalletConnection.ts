@@ -35,11 +35,11 @@ const useWalletConnection = () => {
   // Cüzdan durumunu yenile
   const refreshWalletState = useCallback(async () => {
     if (!checkIfEthereumExists()) return;
-    
+
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const accounts = await provider.listAccounts();
-      
+
       if (accounts.length === 0) {
         setWalletState({
           account: null,
@@ -51,13 +51,13 @@ const useWalletConnection = () => {
         });
         return;
       }
-      
+
       const account = accounts[0];
       const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
       const chainId = parseInt(chainIdHex, 16).toString();
       const balance = await provider.getBalance(account.address);
       const formattedBalance = ethers.formatEther(balance);
-      
+
       // Token bakiyesini almaya çalış (eğer doğru ağdaysa)
       let tokenBalance = null;
       if (chainId === NETWORK_CONFIG.chainId) {
@@ -69,11 +69,12 @@ const useWalletConnection = () => {
           );
           const rawTokenBalance = await tokenContract.balanceOf(account.address);
           tokenBalance = ethers.formatEther(rawTokenBalance);
+          console.log("Token Balance Fetched:", tokenBalance); // Debug log
         } catch (error) {
           console.error("Token balance fetch error:", error);
         }
       }
-      
+
       setWalletState({
         account: account.address,
         balance: formattedBalance,
@@ -105,14 +106,14 @@ const useWalletConnection = () => {
       });
       return;
     }
-    
+
     try {
       // Hesap erişimi iste
       await window.ethereum.request({ method: 'eth_requestAccounts' });
-      
+
       // Cüzdan durumunu yenile
       await refreshWalletState();
-      
+
       toast({
         title: "Wallet connected",
         description: "Your wallet has been successfully connected",
@@ -137,7 +138,7 @@ const useWalletConnection = () => {
       tokenBalance: null,
       provider: null
     });
-    
+
     toast({
       title: "Wallet disconnected",
       description: "Your wallet has been disconnected",
@@ -147,7 +148,7 @@ const useWalletConnection = () => {
   // Ağı değiştir
   const switchNetwork = useCallback(async () => {
     if (!checkIfEthereumExists() || !walletState.isConnected) return;
-    
+
     try {
       // Önce mevcut ağı değiştirmeyi dene
       await window.ethereum.request({
@@ -181,10 +182,10 @@ const useWalletConnection = () => {
         return;
       }
     }
-    
+
     // Cüzdan durumunu yenile
     await refreshWalletState();
-    
+
     toast({
       title: "Network Changed",
       description: "Successfully switched to KITTYVERSE network",
@@ -194,32 +195,32 @@ const useWalletConnection = () => {
   // Event listener'ları ayarla
   useEffect(() => {
     if (!checkIfEthereumExists()) return;
-    
+
     // Hesap değişikliği event'i
     const handleAccountsChanged = () => {
       refreshWalletState();
     };
-    
+
     // Chain değişikliği event'i
     const handleChainChanged = () => {
       // Sayfa yenilemek yerine durum güncelleme tercih edildi
       refreshWalletState();
     };
-    
+
     // Disconnect event'i
     const handleDisconnect = (error: { code: number; message: string }) => {
       console.log("Wallet disconnected:", error);
       disconnectWallet();
     };
-    
+
     // Event listener'ları ekle
     window.ethereum.on('accountsChanged', handleAccountsChanged);
     window.ethereum.on('chainChanged', handleChainChanged);
     window.ethereum.on('disconnect', handleDisconnect);
-    
+
     // İlk durum güncellemesi
     refreshWalletState();
-    
+
     // Cleanup
     return () => {
       if (window.ethereum) {
