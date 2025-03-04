@@ -1,13 +1,11 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { fetchTradingData } from '@/utils/tradingApi';
 import { toast } from "@/components/ui/use-toast";
 import useWalletConnection from '@/hooks/useWalletConnection';
-import { REQUIRED_TOKEN_BALANCE, TOKEN_CONTRACT } from '@/config/network';
+import { REQUIRED_TOKEN_BALANCE, NETWORK_CONFIG } from '@/config/network';
 import { ethers } from 'ethers';
 
+// Define the types
 export type TradingPair = 'BTC/USDT' | 'ETH/USDT' | 'SOL/USDT' | 'BNB/USDT' | 'XRP/USDT' | 'ADA/USDT' | 'TIA/USDT' | 'DYM/USDT' | 'GOAT/USDT' | 'ATOM/USDT' | 'CVP/USDT' | 'RIZ/USDT' | 'DOGE/USDT' | 'DOT/USDT' | 'SHIB/USDT' | 'AVAX/USDT' | 'MATIC/USDT' | 'LINK/USDT' | 'TRX/USDT' | 'UNI/USDT' | 'TON/USDT' | 'ICP/USDT' | 'INJ/USDT' | 'APE/USDT' | 'SUI/USDT' | 'LTC/USDT' | 'BCH/USDT' | 'NEAR/USDT' | 'FIL/USDT' | 'ARB/USDT';
-
 export type Strategy = 'MACD' | 'RSI' | 'Moving Average' | 'Bollinger Bands' | 'Fibonacci Retracement' | 'Stochastic Oscillator' | 'Relative Vigor Index' | 'Parabolic SAR' | 'Ichimoku Cloud' | 'Williams %R';
 export type Signal = 'BUY' | 'SELL' | 'HOLD';
 
@@ -26,6 +24,46 @@ interface AnalysisResult {
   confidence: number;
   priceData: PriceData[];
 }
+
+// Mock fetch function for trading data until real API is connected
+const fetchTradingData = async (
+  pair: TradingPair,
+  strategy: Strategy,
+  riskLevel: number
+): Promise<AnalysisResult> => {
+  // This is a placeholder implementation
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const signals: Signal[] = ['BUY', 'SELL', 'HOLD'];
+      const randomSignal = signals[Math.floor(Math.random() * signals.length)];
+      const confidence = Math.floor(Math.random() * 30) + 70; // 70-99%
+      
+      // Generate mock price data
+      const priceData: PriceData[] = [];
+      const basePrice = pair === 'BTC/USDT' ? 60000 : pair === 'ETH/USDT' ? 3000 : 1000;
+      const now = Date.now();
+      
+      for (let i = 0; i < 30; i++) {
+        const time = now - (29 - i) * 3600 * 1000;
+        const randomOffset = (Math.random() - 0.5) * basePrice * 0.02;
+        const open = basePrice + randomOffset;
+        const high = open + Math.random() * basePrice * 0.01;
+        const low = open - Math.random() * basePrice * 0.01;
+        const close = (high + low) / 2 + (Math.random() - 0.5) * basePrice * 0.005;
+        const volume = Math.floor(Math.random() * 1000) + 500;
+        
+        priceData.push({ time, open, high, low, close, volume });
+      }
+      
+      resolve({
+        signal: randomSignal,
+        analysis: `Based on ${strategy} analysis with risk level ${riskLevel}, the signal for ${pair} is ${randomSignal}.`,
+        confidence,
+        priceData
+      });
+    }, 2000); // Simulate 2-second API delay
+  });
+};
 
 interface TradingContextType {
   selectedPair: TradingPair;
@@ -56,7 +94,7 @@ const TradingContext = createContext<TradingContextType | undefined>(undefined);
 export const TradingProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [selectedPair, setSelectedPair] = useState<TradingPair>('BTC/USDT');
   const [selectedStrategy, setSelectedStrategy] = useState<Strategy>('MACD');
-  const [riskLevel, setRiskLevel] = useState(10); // Changed from 5 to 10
+  const [riskLevel, setRiskLevel] = useState(10);
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [hasRequiredTokens, setHasRequiredTokens] = useState(false);
@@ -71,7 +109,8 @@ export const TradingProvider: React.FC<{ children: ReactNode }> = ({ children })
     switchNetwork
   } = useWalletConnection();
   
-  const isCorrectNetwork = chainId === '595973'; // KITTYVERSE chainId
+  // Check if connected to the correct network (compare with evmChainId)
+  const isCorrectNetwork = Number(chainId) === NETWORK_CONFIG.evmChainId;
   
   // Check if user has enough tokens
   const checkTokenBalance = async () => {
@@ -90,7 +129,7 @@ export const TradingProvider: React.FC<{ children: ReactNode }> = ({ children })
   }, [isConnected, isCorrectNetwork, tokenBalance]);
   
   const analyzeMarket = async () => {
-    // Eğer cüzdan bağlı değilse veya doğru ağda değilse uyarı göster
+    // Check wallet connection and tokens
     if (!isConnected) {
       toast({
         title: "Wallet Not Connected",
@@ -123,7 +162,6 @@ export const TradingProvider: React.FC<{ children: ReactNode }> = ({ children })
       const result = await fetchTradingData(selectedPair, selectedStrategy, riskLevel);
       setAnalysisResult(result);
       
-      // Başarılı analiz toast mesajı
       toast({
         title: `${result.signal} Signal Generated`,
         description: `Analysis completed with ${result.confidence}% confidence`,
@@ -178,3 +216,6 @@ export const useTradingContext = () => {
   }
   return context;
 };
+
+// Export the mock fetch function for use if needed
+export { fetchTradingData };
