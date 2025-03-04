@@ -1,78 +1,36 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { 
   Dialog, 
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
-  DialogTrigger,
   DialogFooter
 } from "@/components/ui/dialog";
 import { Wallet, Link, Link2, Unlink, Coins } from "lucide-react";
 import useWalletConnection from "@/hooks/useWalletConnection";
 import { NETWORK_CONFIG } from "@/config/network";
-import { ethers } from "ethers";
 
 const WalletConnect = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [tokenBalance, setTokenBalance] = useState<string | null>(null);
-  const [canAnalyze, setCanAnalyze] = useState(false);  // User's ability to analyze
-
   const {
     account,
     balance,
     chainId,
     isConnected,
+    tokenBalance,
     connectWallet,
     disconnectWallet,
     switchNetwork
   } = useWalletConnection();
 
-  const isCorrectNetwork = chainId === NETWORK_CONFIG.chainId;
-
-  const KITTY_TOKEN_ADDRESS = "0x278838f86a613193e9cf2efe8846b705674cbfe2"; // KITTY token contract address
-
+  const isCorrectNetwork = chainId === NETWORK_CONFIG.evmChainId;
+  
+  // Shorten address for display
   const shortenAddress = (address: string | null) => {
     if (!address) return "";
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
   };
-
-  // Fetch the wallet token balance
-  useEffect(() => {
-    const fetchTokenBalance = async () => {
-      if (isConnected && account) {
-        try {
-          const provider = new ethers.providers.Web3Provider(window.ethereum);
-
-          // Create the token contract
-          const contract = new ethers.Contract(
-            KITTY_TOKEN_ADDRESS,
-            ["function balanceOf(address) view returns (uint256)", "function decimals() view returns (uint8)"],
-            provider
-          );
-
-          // Get the wallet balance
-          const balance = await contract.balanceOf(account);
-          const decimals = await contract.decimals();  // Token decimal information
-
-          // Format the balance
-          const formattedBalance = ethers.utils.formatUnits(balance, decimals);
-          setTokenBalance(formattedBalance);
-
-          // If balance is 1 or more, allow analysis
-          if (parseFloat(formattedBalance) >= 1) {
-            setCanAnalyze(true);
-          } else {
-            setCanAnalyze(false);
-          }
-        } catch (error) {
-          console.error("Error fetching token balance:", error);
-        }
-      }
-    };
-
-    fetchTokenBalance();
-  }, [account, isConnected]);
 
   return (
     <>
@@ -129,26 +87,15 @@ const WalletConnect = () => {
                   </span>
                 </div>
                 
-                {isCorrectNetwork && tokenBalance !== null && (
+                {isCorrectNetwork && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">KITTY Tokens:</span>
                     <span className="text-sm">
-                      {parseFloat(tokenBalance).toFixed(4)} KITTY
+                      {tokenBalance ? `${parseFloat(tokenBalance).toFixed(4)} ${NETWORK_CONFIG.kittyToken.symbol}` : '0.0000 KITTY'}
                     </span>
                   </div>
                 )}
-
-                {/* User's ability to analyze based on token balance */}
-                {canAnalyze ? (
-                  <div className="pt-4 text-green-500">
-                    <p>You have enough KITTY tokens to generate signals!</p>
-                  </div>
-                ) : (
-                  <div className="pt-4 text-red-500">
-                    <p>You need at least 1 KITTY token to generate signals.</p>
-                  </div>
-                )}
-
+                
                 <div className="pt-4">
                   <Button 
                     variant="destructive" 
@@ -166,7 +113,7 @@ const WalletConnect = () => {
             ) : (
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Connect your wallet to access the trading signals and manage your portfolio on the KITTYVERSE network.
+                  Connect your wallet to access the Kittyverse network and view your KITTY token balance.
                 </p>
                 
                 <Button 
