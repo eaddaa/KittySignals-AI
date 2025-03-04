@@ -96,7 +96,6 @@ export const TradingProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [riskLevel, setRiskLevel] = useState(10);
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
-  const [hasRequiredTokens, setHasRequiredTokens] = useState(false);
 
   const {
     isConnected, 
@@ -114,15 +113,15 @@ export const TradingProvider: React.FC<{ children: ReactNode }> = ({ children })
     if (isConnected && isCorrectNetwork && tokenBalance) {
       const requiredBalance = ethers.formatEther(REQUIRED_TOKEN_BALANCE);
       const userBalance = parseFloat(tokenBalance);
-      setHasRequiredTokens(userBalance >= parseFloat(requiredBalance));
-    } else {
-      setHasRequiredTokens(false);
+      return userBalance >= parseFloat(requiredBalance);
     }
+    return false;
   };
 
-  useEffect(() => {
-    checkTokenBalance();
-  }, [isConnected, isCorrectNetwork, tokenBalance]);
+  const hasRequiredTokens = useMemo(() => {
+    checkTokenBalance(); // This will return a promise, so handle accordingly
+    return tokenBalance && parseFloat(tokenBalance) >= 1;
+  }, [tokenBalance]);
 
   const analyzeMarket = async () => {
     if (!isConnected) {
@@ -143,7 +142,8 @@ export const TradingProvider: React.FC<{ children: ReactNode }> = ({ children })
       return;
     }
 
-    if (!hasRequiredTokens) {
+    const hasTokens = await checkTokenBalance();
+    if (!hasTokens) {
       toast({
         title: "Insufficient KITTY Tokens",
         description: "You need at least 1 KITTY token to use KittySignals AI",
@@ -172,10 +172,6 @@ export const TradingProvider: React.FC<{ children: ReactNode }> = ({ children })
       setAnalyzing(false);
     }
   };
-
-  const hasRequiredTokens = useMemo(() => {
-    return tokenBalance && parseFloat(tokenBalance) >= 1;
-  }, [tokenBalance]);
 
   return (
     <TradingContext.Provider
