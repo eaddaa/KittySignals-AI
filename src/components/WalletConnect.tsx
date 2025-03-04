@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { 
   Dialog, 
@@ -12,27 +11,71 @@ import {
 import { Wallet, Link, Link2, Unlink, Coins } from "lucide-react";
 import useWalletConnection from "@/hooks/useWalletConnection";
 import { NETWORK_CONFIG } from "@/config/network";
+import { ethers } from "ethers";
 
 const WalletConnect = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [tokenBalance, setTokenBalance] = useState<string | null>(null);
+  
   const {
     account,
     balance,
     chainId,
     isConnected,
-    tokenBalance,
     connectWallet,
     disconnectWallet,
     switchNetwork
   } = useWalletConnection();
 
   const isCorrectNetwork = chainId === NETWORK_CONFIG.chainId;
-  
-  // Adresi kısalt
+
+  // Replace with your KITTY token contract address
+  const KITTY_TOKEN_ADDRESS = "0x278838f86a613193e9cf2efe8846b705674cbfe2"; 
+
   const shortenAddress = (address: string | null) => {
     if (!address) return "";
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
   };
+
+  // Fetch token balance from the smart contract
+  useEffect(() => {
+    const fetchTokenBalance = async () => {
+      if (isConnected && account) {
+        try {
+          const provider = new ethers.providers.Web3Provider(window.ethereum);
+
+          // Check if provider is available
+          if (!provider) {
+            console.error("Ethereum provider is not available");
+            return;
+          }
+
+          const contract = new ethers.Contract(
+            KITTY_TOKEN_ADDRESS,
+            ["function balanceOf(address) view returns (uint256)"],
+            provider
+          );
+
+          // Fetch balance
+          const balance = await contract.balanceOf(account);
+          
+          // Log the raw balance and formatted balance for debugging
+          console.log("Raw balance:", balance.toString());
+
+          // Convert to human-readable format (18 decimals)
+          const formattedBalance = ethers.utils.formatUnits(balance, 18);
+          console.log("Formatted balance:", formattedBalance);
+
+          // Set the token balance state
+          setTokenBalance(formattedBalance);
+        } catch (error) {
+          console.error("Failed to fetch token balance:", error);
+        }
+      }
+    };
+
+    fetchTokenBalance();
+  }, [account, isConnected]);
 
   return (
     <>
@@ -89,7 +132,7 @@ const WalletConnect = () => {
                   </span>
                 </div>
                 
-                {isCorrectNetwork && tokenBalance && (
+                {isCorrectNetwork && tokenBalance !== null && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">KITTY Tokens:</span>
                     <span className="text-sm">
@@ -154,3 +197,4 @@ const WalletConnect = () => {
 };
 
 export default WalletConnect;
+
