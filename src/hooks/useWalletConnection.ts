@@ -1,269 +1,222 @@
-
+// useWalletConnection.ts
 import { useState, useEffect, useCallback } from 'react';
+import { BrowserProvider, ethers } from 'ethers';
 import { toast } from "@/components/ui/use-toast";
-import { NETWORK_CONFIG } from '@/config/network';
+import { 
+  NETWORK_CONFIG, 
+  CHAIN_ID_HEX, 
+  TOKEN_CONTRACT, 
+  NETWORK_PARAMS 
+} from '@/config/network';
 
-// Define types for window.ethereum and web3 related objects
-declare global {
-  interface Window {
-    ethereum?: {
-      isMetaMask?: boolean;
-      request: (args: { method: string; params?: any[] }) => Promise<any>;
-      on: (event: string, callback: (...args: any[]) => void) => void;
-      removeListener: (event: string, callback: (...args: any[]) => void) => void;
-    };
-  }
+interface WalletState {
+  account: string | null;
+  balance: string | null;
+  chainId: string | null;
+  isConnected: boolean;
+  tokenBalance: string | null;
+  provider: BrowserProvider | null;
 }
 
 const useWalletConnection = () => {
-  const [account, setAccount] = useState<string | null>(null);
-  const [chainId, setChainId] = useState<number | null>(null);
-  const [balance, setBalance] = useState<string | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
-  const [tokenBalance, setTokenBalance] = useState<string | null>(null);
+  const [walletState, setWalletState] = useState<WalletState>({
+    account: null,
+    balance: null,
+    chainId: null,
+    isConnected: false,
+    tokenBalance: null,
+    provider: null
+  });
 
-  // Check if MetaMask is installed
-  const isMetaMaskInstalled = useCallback(() => {
-    return typeof window !== 'undefined' && window.ethereum?.isMetaMask;
+  const checkIfEthereumExists = useCallback(() => {
+    return typeof window !== 'undefined' && window.ethereum !== undefined;
   }, []);
 
-  // Format balance with proper decimals
-  const formatBalance = (balanceWei: string, decimals: number): string => {
-    if (!balanceWei) return '0';
-    return (parseInt(balanceWei) / Math.pow(10, decimals)).toString();
-  };
-
-  // Fetch native token balance (DYM)
-  const fetchBalance = useCallback(async (address: string) => {
-    if (!window.ethereum) return;
-
-    try {
-      const balanceHex = await window.ethereum.request({
-        method: 'eth_getBalance',
-        params: [address, 'latest'],
-      });
-      
-      const balanceWei = parseInt(balanceHex, 16).toString();
-      setBalance(formatBalance(balanceWei, 18));
-    } catch (error) {
-      console.error('Error fetching balance:', error);
-      setBalance(null);
-    }
-  }, []);
-
-  // Fetch KITTY token balance
-  const fetchTokenBalance = useCallback(async (address: string) => {
-    if (!window.ethereum || !NETWORK_CONFIG.kittyToken.address) return;
-
-    try {
-      // Call the balanceOf function on the token contract
-      const data = '0x70a08231' + // Function signature for balanceOf(address)
-        '000000000000000000000000' + address.slice(2); // Pad the address to 32 bytes
-
-      const result = await window.ethereum.request({
-        method: 'eth_call',
-        params: [
-          {
-            to: NETWORK_CONFIG.kittyToken.address,
-            data
-          },
-          'latest'
-        ]
-      });
-
-      if (result && result !== '0x') {
-        const balanceWei = parseInt(result, 16).toString();
-        console.log("Raw KITTY balance:", balanceWei);
-        setTokenBalance(formatBalance(balanceWei, NETWORK_CONFIG.kittyToken.decimals));
-        console.log("Formatted KITTY balance:", formatBalance(balanceWei, NETWORK_CONFIG.kittyToken.decimals));
-      } else {
-        console.error('Empty or invalid token balance result');
-        setTokenBalance('0');
-      }
-    } catch (error) {
-      console.error('Error fetching token balance:', error);
-      setTokenBalance(null);
-    }
-  }, []);
-
-  // Update account state and fetch balances
-  const updateAccount = useCallback(async (newAccount: string | null) => {
-    setAccount(newAccount);
-    setIsConnected(!!newAccount);
+  const refreshWalletState = useCallback(async () => {
+    if (!checkIfEthereumExists()) return;
     
-    if (newAccount) {
-      fetchBalance(newAccount);
-      if (chainId === NETWORK_CONFIG.evmChainId) {
-        fetchTokenBalance(newAccount);
-      } else {
-        setTokenBalance(null);
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const accounts = await provider.listAccounts();
+      
+      if (accounts.length === 0) {
+        setWalletState({
+          account: null,
+          balance: null,
+          chainId: null,
+          isConnected: false,
+          tokenBalance: null,
+          provider: null
+        });
+        return;
       }
-    } else {
-      setBalance(null);
-      setTokenBalance(null);
+      
+      const account = accounts[0];
+      const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
+      const chainId = parseInt(chainIdHex, 16).toString();
+      const balance = await provider.getBalance(account.address);
+      const formattedBalance = ethers.formatEther(balance);
+      
+      let tokenBalance = null;
+      if (chainId === NETWORK_CONFIG.chainId) {
+        try {
+          const tokenContract = new ethers.Contract(
+            TOKEN_CONTRACT.address,
+            TOKEN_CONTRACT.abi,
+            provider
+          );
+          const rawTokenBalance = await tokenContract.balanceOf(account.address);
+          tokenBalance = ethers.formatEther(rawTokenBalance);
+        } catch (error) {
+          console.error("Token balance fetch error:", error);
+        }
+      }
+      
+      setWalletState({
+        account: account.address,
+        balance: formattedBalance,
+        chainId,
+        isConnected: true,
+        tokenBalance,
+        provider
+      });
+    } catch (error) {
+      console.error("Wallet state refresh error:", error);
+      setWalletState({
+        account: null,
+        balance: null,
+        chainId: null,
+        isConnected: false,
+        tokenBalance: null,
+        provider: null
+      });
     }
-  }, [chainId, fetchBalance, fetchTokenBalance]);
+  }, [checkIfEthereumExists]);
 
-  // Connect wallet
   const connectWallet = useCallback(async () => {
-    if (!isMetaMaskInstalled()) {
+    if (!checkIfEthereumExists()) {
       toast({
-        title: "MetaMask is not installed",
-        description: "Please install MetaMask extension to connect your wallet",
-        variant: "destructive"
+        title: "MetaMask not found",
+        description: "Please install MetaMask to connect your wallet",
+        variant: "destructive",
       });
       return;
     }
-
+    
     try {
-      const accounts = await window.ethereum!.request({
-        method: 'eth_requestAccounts',
-      });
+      await window.ethereum.request({ method: 'eth_requestAccounts' });
+      await refreshWalletState();
       
-      // Get current chain ID
-      const chainIdHex = await window.ethereum!.request({
-        method: 'eth_chainId',
-      });
-      
-      setChainId(parseInt(chainIdHex, 16));
-      
-      if (accounts.length > 0) {
-        updateAccount(accounts[0]);
-        
-        toast({
-          title: "Wallet Connected",
-          description: "Your wallet has been successfully connected",
-        });
-      }
-    } catch (error: any) {
-      console.error('Error connecting wallet:', error);
       toast({
-        title: "Connection Failed",
-        description: error.message || "Failed to connect wallet",
-        variant: "destructive"
+        title: "Wallet connected",
+        description: "Your wallet has been successfully connected",
+      });
+    } catch (error) {
+      console.error("Wallet connection error:", error);
+      toast({
+        title: "Connection failed",
+        description: "Failed to connect to your wallet",
+        variant: "destructive",
       });
     }
-  }, [isMetaMaskInstalled, updateAccount]);
+  }, [checkIfEthereumExists, refreshWalletState]);
 
-  // Disconnect wallet
   const disconnectWallet = useCallback(() => {
-    setAccount(null);
-    setBalance(null);
-    setTokenBalance(null);
-    setIsConnected(false);
+    setWalletState({
+      account: null,
+      balance: null,
+      chainId: null,
+      isConnected: false,
+      tokenBalance: null,
+      provider: null
+    });
     
     toast({
-      title: "Wallet Disconnected",
+      title: "Wallet disconnected",
       description: "Your wallet has been disconnected",
     });
   }, []);
 
-  // Switch network
   const switchNetwork = useCallback(async () => {
-    if (!window.ethereum) return;
-
+    if (!checkIfEthereumExists() || !walletState.isConnected) return;
+    
     try {
-      // Try to switch to the network
       await window.ethereum.request({
         method: 'wallet_switchEthereumChain',
-        params: [{ chainId: `0x${NETWORK_CONFIG.evmChainId.toString(16)}` }],
+        params: [{ chainId: CHAIN_ID_HEX }]
       });
-      
-      toast({
-        title: "Network Switched",
-        description: `Connected to ${NETWORK_CONFIG.chainName}`,
-      });
-    } catch (switchError: any) {
-      // If the network is not added to MetaMask, add it
-      if (switchError.code === 4902) {
+    } catch (error: any) {
+      if (error.code === 4902) {
         try {
           await window.ethereum.request({
             method: 'wallet_addEthereumChain',
-            params: [
-              {
-                chainId: `0x${NETWORK_CONFIG.evmChainId.toString(16)}`,
-                chainName: NETWORK_CONFIG.chainName,
-                rpcUrls: [NETWORK_CONFIG.evmRPC],
-                nativeCurrency: NETWORK_CONFIG.nativeCurrency,
-                blockExplorerUrls: [NETWORK_CONFIG.blockExplorer],
-              },
-            ],
+            params: [NETWORK_PARAMS]
           });
         } catch (addError) {
-          console.error('Error adding network:', addError);
+          console.error("Failed to add network:", addError);
           toast({
-            title: "Network Error",
-            description: "Failed to add network to MetaMask",
-            variant: "destructive"
+            title: "Network Change Failed",
+            description: "Failed to add KITTYVERSE network to your wallet",
+            variant: "destructive",
           });
+          return;
         }
       } else {
-        console.error('Error switching network:', switchError);
+        console.error("Failed to switch network:", error);
         toast({
-          title: "Network Error",
-          description: "Failed to switch network",
-          variant: "destructive"
+          title: "Network Change Failed",
+          description: "Failed to switch to KITTYVERSE network",
+          variant: "destructive",
         });
+        return;
       }
     }
-  }, []);
+    
+    await refreshWalletState();
+    
+    toast({
+      title: "Network Changed",
+      description: "Successfully switched to KITTYVERSE network",
+    });
+  }, [checkIfEthereumExists, refreshWalletState, walletState.isConnected]);
 
-  // Setup event listeners
   useEffect(() => {
-    if (!window.ethereum) return;
-
-    const handleAccountsChanged = (accounts: string[]) => {
-      if (accounts.length === 0) {
-        disconnectWallet();
-      } else {
-        updateAccount(accounts[0]);
-      }
+    if (!checkIfEthereumExists()) return;
+    
+    const handleAccountsChanged = () => {
+      refreshWalletState();
     };
-
-    const handleChainChanged = (chainIdHex: string) => {
-      const newChainId = parseInt(chainIdHex, 16);
-      setChainId(newChainId);
-      
-      if (account) {
-        fetchBalance(account);
-        if (newChainId === NETWORK_CONFIG.evmChainId) {
-          fetchTokenBalance(account);
-        } else {
-          setTokenBalance(null);
-        }
-      }
+    
+    const handleChainChanged = () => {
+      refreshWalletState();
     };
-
+    
+    const handleDisconnect = (error: { code: number; message: string }) => {
+      console.log("Wallet disconnected:", error);
+      disconnectWallet();
+    };
+    
     window.ethereum.on('accountsChanged', handleAccountsChanged);
     window.ethereum.on('chainChanged', handleChainChanged);
-
-    // Check if already connected
-    window.ethereum.request({ method: 'eth_accounts' })
-      .then((accounts: string[]) => {
-        if (accounts.length > 0) {
-          window.ethereum!.request({ method: 'eth_chainId' })
-            .then((chainIdHex: string) => {
-              setChainId(parseInt(chainIdHex, 16));
-              updateAccount(accounts[0]);
-            });
-        }
-      });
-
+    window.ethereum.on('disconnect', handleDisconnect);
+    
+    refreshWalletState();
+    
     return () => {
-      window.ethereum?.removeListener('accountsChanged', handleAccountsChanged);
-      window.ethereum?.removeListener('chainChanged', handleChainChanged);
+      if (window.ethereum) {
+        window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+        window.ethereum.removeListener('chainChanged', handleChainChanged);
+        window.ethereum.removeListener('disconnect', handleDisconnect);
+      }
     };
-  }, [account, disconnectWallet, fetchBalance, fetchTokenBalance, updateAccount]);
+  }, [checkIfEthereumExists, disconnectWallet, refreshWalletState]);
 
   return {
-    account,
-    balance,
-    chainId,
-    isConnected,
-    tokenBalance,
+    ...walletState,
     connectWallet,
     disconnectWallet,
     switchNetwork,
+    refreshWalletState
   };
 };
 
