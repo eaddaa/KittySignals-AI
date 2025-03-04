@@ -1,9 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import { toast } from "@/components/ui/use-toast";
 import useWalletConnection from '@/hooks/useWalletConnection';
 import { REQUIRED_TOKEN_BALANCE, NETWORK_CONFIG } from '@/config/network';
 import { ethers } from 'ethers';
 
+// Define the types
 export type TradingPair = 'BTC/USDT' | 'ETH/USDT' | 'SOL/USDT' | 'BNB/USDT' | 'XRP/USDT' | 'ADA/USDT' | 'TIA/USDT' | 'DYM/USDT' | 'GOAT/USDT' | 'ATOM/USDT' | 'CVP/USDT' | 'RIZ/USDT' | 'DOGE/USDT' | 'DOT/USDT' | 'SHIB/USDT' | 'AVAX/USDT' | 'MATIC/USDT' | 'LINK/USDT' | 'TRX/USDT' | 'UNI/USDT' | 'TON/USDT' | 'ICP/USDT' | 'INJ/USDT' | 'APE/USDT' | 'SUI/USDT' | 'LTC/USDT' | 'BCH/USDT' | 'NEAR/USDT' | 'FIL/USDT' | 'ARB/USDT';
 export type Strategy = 'MACD' | 'RSI' | 'Moving Average' | 'Bollinger Bands' | 'Fibonacci Retracement' | 'Stochastic Oscillator' | 'Relative Vigor Index' | 'Parabolic SAR' | 'Ichimoku Cloud' | 'Williams %R';
 export type Signal = 'BUY' | 'SELL' | 'HOLD';
@@ -24,6 +25,7 @@ interface AnalysisResult {
   priceData: PriceData[];
 }
 
+// Mock fetch function for trading data until real API is connected
 const fetchTradingData = async (
   pair: TradingPair,
   strategy: Strategy,
@@ -33,8 +35,9 @@ const fetchTradingData = async (
     setTimeout(() => {
       const signals: Signal[] = ['BUY', 'SELL', 'HOLD'];
       const randomSignal = signals[Math.floor(Math.random() * signals.length)];
-      const confidence = Math.floor(Math.random() * 30) + 70;
+      const confidence = Math.floor(Math.random() * 30) + 70; // 70-99%
 
+      // Generate mock price data
       const priceData: PriceData[] = [];
       const basePrice = pair === 'BTC/USDT' ? 60000 : pair === 'ETH/USDT' ? 3000 : 1000;
       const now = Date.now();
@@ -95,26 +98,25 @@ export const TradingProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [hasRequiredTokens, setHasRequiredTokens] = useState(false);
 
-  const { isConnected, account, chainId, tokenBalance, connectWallet, disconnectWallet, switchNetwork } = useWalletConnection();
+  const {
+    isConnected, 
+    account, 
+    chainId, 
+    tokenBalance,
+    connectWallet, 
+    disconnectWallet, 
+    switchNetwork
+  } = useWalletConnection();
 
   const isCorrectNetwork = Number(chainId) === NETWORK_CONFIG.evmChainId;
 
   const checkTokenBalance = async () => {
-    try {
-      if (isConnected && isCorrectNetwork && tokenBalance) {
-        const requiredBalance = ethers.formatEther(REQUIRED_TOKEN_BALANCE);
-        const userBalance = parseFloat(tokenBalance);
-        setHasRequiredTokens(userBalance >= parseFloat(requiredBalance));
-      } else {
-        setHasRequiredTokens(false);
-      }
-    } catch (error) {
-      console.error('Error checking token balance:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to check token balance.',
-        variant: 'destructive',
-      });
+    if (isConnected && isCorrectNetwork && tokenBalance) {
+      const requiredBalance = ethers.formatEther(REQUIRED_TOKEN_BALANCE);
+      const userBalance = parseFloat(tokenBalance);
+      setHasRequiredTokens(userBalance >= parseFloat(requiredBalance));
+    } else {
+      setHasRequiredTokens(false);
     }
   };
 
@@ -125,27 +127,27 @@ export const TradingProvider: React.FC<{ children: ReactNode }> = ({ children })
   const analyzeMarket = async () => {
     if (!isConnected) {
       toast({
-        title: 'Wallet Not Connected',
-        description: 'Please connect your wallet to analyze the market',
-        variant: 'destructive',
+        title: "Wallet Not Connected",
+        description: "Please connect your wallet to analyze the market",
+        variant: "destructive",
       });
       return;
     }
 
     if (!isCorrectNetwork) {
       toast({
-        title: 'Wrong Network',
-        description: 'Please switch to the correct network to analyze the market',
-        variant: 'destructive',
+        title: "Wrong Network",
+        description: "Please switch to KITTYVERSE network to analyze the market",
+        variant: "destructive",
       });
       return;
     }
 
     if (!hasRequiredTokens) {
       toast({
-        title: 'Insufficient Tokens',
-        description: 'You need at least 1 token to use this feature.',
-        variant: 'destructive',
+        title: "Insufficient KITTY Tokens",
+        description: "You need at least 1 KITTY token to use KittySignals AI",
+        variant: "destructive",
       });
       return;
     }
@@ -162,14 +164,18 @@ export const TradingProvider: React.FC<{ children: ReactNode }> = ({ children })
     } catch (error) {
       console.error('Analysis error:', error);
       toast({
-        title: 'Analysis Failed',
-        description: 'Failed to analyze the market. Please try again.',
-        variant: 'destructive',
+        title: "Analysis Failed",
+        description: "Failed to analyze the market. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setAnalyzing(false);
     }
   };
+
+  const hasRequiredTokens = useMemo(() => {
+    return tokenBalance && parseFloat(tokenBalance) >= 1;
+  }, [tokenBalance]);
 
   return (
     <TradingContext.Provider
@@ -210,5 +216,6 @@ export const useTradingContext = () => {
   return context;
 };
 
+// Export the mock fetch function for use if needed
 export { fetchTradingData };
 
