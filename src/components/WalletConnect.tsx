@@ -16,7 +16,8 @@ import { ethers } from "ethers";
 const WalletConnect = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [tokenBalance, setTokenBalance] = useState<string | null>(null);
-  
+  const [canAnalyze, setCanAnalyze] = useState(false);  // User's ability to analyze
+
   const {
     account,
     balance,
@@ -29,47 +30,43 @@ const WalletConnect = () => {
 
   const isCorrectNetwork = chainId === NETWORK_CONFIG.chainId;
 
-  // Replace with your KITTY token contract address
-  const KITTY_TOKEN_ADDRESS = "0x278838f86a613193e9cf2efe8846b705674cbfe2"; 
+  const KITTY_TOKEN_ADDRESS = "0x278838f86a613193e9cf2efe8846b705674cbfe2"; // KITTY token contract address
 
   const shortenAddress = (address: string | null) => {
     if (!address) return "";
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
   };
 
-  // Fetch token balance from the smart contract
+  // Fetch the wallet token balance
   useEffect(() => {
     const fetchTokenBalance = async () => {
       if (isConnected && account) {
         try {
           const provider = new ethers.providers.Web3Provider(window.ethereum);
 
-          // Check if provider is available
-          if (!provider) {
-            console.error("Ethereum provider is not available");
-            return;
-          }
-
+          // Create the token contract
           const contract = new ethers.Contract(
             KITTY_TOKEN_ADDRESS,
-            ["function balanceOf(address) view returns (uint256)"],
+            ["function balanceOf(address) view returns (uint256)", "function decimals() view returns (uint8)"],
             provider
           );
 
-          // Fetch balance
+          // Get the wallet balance
           const balance = await contract.balanceOf(account);
-          
-          // Log the raw balance and formatted balance for debugging
-          console.log("Raw balance:", balance.toString());
+          const decimals = await contract.decimals();  // Token decimal information
 
-          // Convert to human-readable format (18 decimals)
-          const formattedBalance = ethers.utils.formatUnits(balance, 18);
-          console.log("Formatted balance:", formattedBalance);
-
-          // Set the token balance state
+          // Format the balance
+          const formattedBalance = ethers.utils.formatUnits(balance, decimals);
           setTokenBalance(formattedBalance);
+
+          // If balance is 1 or more, allow analysis
+          if (parseFloat(formattedBalance) >= 1) {
+            setCanAnalyze(true);
+          } else {
+            setCanAnalyze(false);
+          }
         } catch (error) {
-          console.error("Failed to fetch token balance:", error);
+          console.error("Error fetching token balance:", error);
         }
       }
     };
@@ -140,7 +137,18 @@ const WalletConnect = () => {
                     </span>
                   </div>
                 )}
-                
+
+                {/* User's ability to analyze based on token balance */}
+                {canAnalyze ? (
+                  <div className="pt-4 text-green-500">
+                    <p>You have enough KITTY tokens to generate signals!</p>
+                  </div>
+                ) : (
+                  <div className="pt-4 text-red-500">
+                    <p>You need at least 1 KITTY token to generate signals.</p>
+                  </div>
+                )}
+
                 <div className="pt-4">
                   <Button 
                     variant="destructive" 
@@ -197,4 +205,5 @@ const WalletConnect = () => {
 };
 
 export default WalletConnect;
+
 
