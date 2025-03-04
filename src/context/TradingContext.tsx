@@ -59,7 +59,7 @@ export const TradingProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [hasRequiredTokens, setHasRequiredTokens] = useState(false);
-
+  
   const {
     isConnected, 
     account, 
@@ -69,26 +69,25 @@ export const TradingProvider: React.FC<{ children: ReactNode }> = ({ children })
     disconnectWallet, 
     switchNetwork
   } = useWalletConnection();
-
-  const isCorrectNetwork = chainId === NETWORK_CONFIG.chainId;
-
+  
+  const isCorrectNetwork = chainId === '595973'; // KITTYVERSE chainId
+  
   // Check if user has enough tokens
   const checkTokenBalance = async () => {
     if (isConnected && isCorrectNetwork && tokenBalance) {
       const requiredBalance = ethers.formatEther(REQUIRED_TOKEN_BALANCE);
       const userBalance = parseFloat(tokenBalance);
       setHasRequiredTokens(userBalance >= parseFloat(requiredBalance));
-      console.log("Has Required Tokens:", userBalance >= parseFloat(requiredBalance)); // Debug log
     } else {
       setHasRequiredTokens(false);
     }
   };
-
+  
   // Run token check when wallet state changes
   useEffect(() => {
     checkTokenBalance();
   }, [isConnected, isCorrectNetwork, tokenBalance]);
-
+  
   const analyzeMarket = async () => {
     // Eğer cüzdan bağlı değilse veya doğru ağda değilse uyarı göster
     if (!isConnected) {
@@ -99,7 +98,7 @@ export const TradingProvider: React.FC<{ children: ReactNode }> = ({ children })
       });
       return;
     }
-
+    
     if (!isCorrectNetwork) {
       toast({
         title: "Wrong Network",
@@ -108,7 +107,7 @@ export const TradingProvider: React.FC<{ children: ReactNode }> = ({ children })
       });
       return;
     }
-
+    
     if (!hasRequiredTokens) {
       toast({
         title: "Insufficient KITTY Tokens",
@@ -117,12 +116,12 @@ export const TradingProvider: React.FC<{ children: ReactNode }> = ({ children })
       });
       return;
     }
-
+    
     setAnalyzing(true);
     try {
       const result = await fetchTradingData(selectedPair, selectedStrategy, riskLevel);
       setAnalysisResult(result);
-
+      
       // Başarılı analiz toast mesajı
       toast({
         title: `${result.signal} Signal Generated`,
