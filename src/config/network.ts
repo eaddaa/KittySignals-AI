@@ -8,8 +8,8 @@ export const NETWORK_CONFIG = {
   restEndpoint: "https://dymrollapp-rest.kittyverse.click",
   blockExplorer: "https://explorer.kittyverse.click",
   nativeCurrency: {
-    name: "DYM",
-    symbol: "DYM",
+    name: "KITTY",
+    symbol: "KITTY",
     decimals: 18
   },
   kittyToken: {
