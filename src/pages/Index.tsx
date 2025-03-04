@@ -4,6 +4,7 @@ import { TradingProvider, useTradingContext } from "@/context/TradingContext";
 import Header from "@/components/Header";
 import { AlertCircle } from "lucide-react";
 
+// Separate the dashboard component that uses the context
 const TradingDashboard = () => {
   const { 
     selectedPair, 
@@ -263,6 +264,7 @@ const TradingDashboard = () => {
   );
 };
 
+// The main Index component must wrap TradingDashboard with the provider
 const Index = () => (
   <TradingProvider>
     <TradingDashboard />
