@@ -1,3 +1,4 @@
+// WalletConnect.tsx
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { 
@@ -5,6 +6,7 @@ import {
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
+  DialogTrigger,
   DialogFooter
 } from "@/components/ui/dialog";
 import { Wallet, Link, Link2, Unlink, Coins } from "lucide-react";
@@ -24,9 +26,8 @@ const WalletConnect = () => {
     switchNetwork
   } = useWalletConnection();
 
-  const isCorrectNetwork = chainId === NETWORK_CONFIG.evmChainId;
+  const isCorrectNetwork = chainId === NETWORK_CONFIG.chainId;
   
-  // Shorten address for display
   const shortenAddress = (address: string | null) => {
     if (!address) return "";
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
@@ -87,11 +88,11 @@ const WalletConnect = () => {
                   </span>
                 </div>
                 
-                {isCorrectNetwork && (
+                {isCorrectNetwork && tokenBalance && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">KITTY Tokens:</span>
                     <span className="text-sm">
-                      {tokenBalance ? `${parseFloat(tokenBalance).toFixed(4)} ${NETWORK_CONFIG.kittyToken.symbol}` : '0.0000 KITTY'}
+                      {parseFloat(tokenBalance).toFixed(4)} KITTY
                     </span>
                   </div>
                 )}
@@ -113,7 +114,7 @@ const WalletConnect = () => {
             ) : (
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Connect your wallet to access the Kittyverse network and view your KITTY token balance.
+                  Connect your wallet to access the trading signals and manage your portfolio on the KITTYVERSE network.
                 </p>
                 
                 <Button 
@@ -152,4 +153,3 @@ const WalletConnect = () => {
 };
 
 export default WalletConnect;
-
