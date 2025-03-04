@@ -2,6 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { TradingProvider, useTradingContext } from "@/context/TradingContext";
 import Header from "@/components/Header";
+import { AlertCircle } from "lucide-react";
 
 const TradingDashboard = () => {
   const { 
@@ -14,6 +15,7 @@ const TradingDashboard = () => {
     analyzing,
     analysisResult,
     analyzeMarket,
+    hasRequiredTokens,
     wallet
   } = useTradingContext();
   
@@ -24,7 +26,8 @@ const TradingDashboard = () => {
   ];
   
   const strategies = [
-    'MACD', 'RSI', 'Moving Average', 'Bollinger Bands', 'Fibonacci Retracement'
+    'MACD', 'RSI', 'Moving Average', 'Bollinger Bands', 'Fibonacci Retracement',
+    'Stochastic Oscillator', 'Relative Vigor Index', 'Parabolic SAR', 'Ichimoku Cloud', 'Williams %R'
   ];
   
   const getSignalColor = () => {
@@ -74,6 +77,22 @@ const TradingDashboard = () => {
                       Switch to KITTYVERSE
                     </Button>
                   )}
+                  {wallet.isCorrectNetwork && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-500">KITTY Balance:</span>
+                      <span className={`text-sm ${hasRequiredTokens ? 'text-green-600' : 'text-red-500'}`}>
+                        {wallet.tokenBalance ? parseFloat(wallet.tokenBalance).toFixed(4) : '0.0000'}
+                      </span>
+                    </div>
+                  )}
+                  {wallet.isCorrectNetwork && !hasRequiredTokens && (
+                    <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-md flex items-start space-x-2">
+                      <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
+                      <span className="text-xs text-red-700">
+                        You need at least 1 KITTY token to generate signals
+                      </span>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-center">
@@ -117,7 +136,7 @@ const TradingDashboard = () => {
               <label className="block text-sm font-medium mb-2">
                 Strategy
               </label>
-              <div className="grid grid-cols-1 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 {strategies.map((strategy) => (
                   <button
                     key={strategy}
@@ -157,10 +176,16 @@ const TradingDashboard = () => {
             <Button
               className="w-full"
               onClick={analyzeMarket}
-              disabled={analyzing || !wallet.isConnected || !wallet.isCorrectNetwork}
+              disabled={analyzing || !wallet.isConnected || !wallet.isCorrectNetwork || !hasRequiredTokens}
             >
               {analyzing ? 'Analyzing...' : 'Generate Signal'}
             </Button>
+            
+            {wallet.isConnected && wallet.isCorrectNetwork && !hasRequiredTokens && (
+              <p className="mt-2 text-xs text-center text-red-500">
+                You need at least 1 KITTY token to use KittySignals AI
+              </p>
+            )}
           </div>
           
           {/* Results Panel */}
@@ -218,7 +243,9 @@ const TradingDashboard = () => {
                 <p className="text-gray-500 max-w-md">
                   {wallet.isConnected 
                     ? wallet.isCorrectNetwork 
-                      ? "Select your trading parameters and click 'Generate Signal' to get AI trading recommendations."
+                      ? hasRequiredTokens
+                        ? "Select your trading parameters and click 'Generate Signal' to get AI trading recommendations."
+                        : "You need at least 1 KITTY token to use KittySignals AI."
                       : "Please switch to the KITTYVERSE network to generate signals."
                     : "Connect your wallet to access AI trading signals."}
                 </p>

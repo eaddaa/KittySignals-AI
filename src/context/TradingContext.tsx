@@ -3,9 +3,11 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { fetchTradingData } from '@/utils/tradingApi';
 import { toast } from "@/components/ui/use-toast";
 import useWalletConnection from '@/hooks/useWalletConnection';
+import { REQUIRED_TOKEN_BALANCE, TOKEN_CONTRACT } from '@/config/network';
+import { ethers } from 'ethers';
 
 export type TradingPair = 'BTC/USDT' | 'ETH/USDT' | 'SOL/USDT' | 'BNB/USDT' | 'XRP/USDT' | 'ADA/USDT' | 'TIA/USDT' | 'DYM/USDT' | 'GOAT/USDT' | 'ATOM/USDT' | 'CVP/USDT' | 'RIZ/USDT';
-export type Strategy = 'MACD' | 'RSI' | 'Moving Average' | 'Bollinger Bands' | 'Fibonacci Retracement';
+export type Strategy = 'MACD' | 'RSI' | 'Moving Average' | 'Bollinger Bands' | 'Fibonacci Retracement' | 'Stochastic Oscillator' | 'Relative Vigor Index' | 'Parabolic SAR' | 'Ichimoku Cloud' | 'Williams %R';
 export type Signal = 'BUY' | 'SELL' | 'HOLD';
 
 interface PriceData {
@@ -34,11 +36,14 @@ interface TradingContextType {
   analyzing: boolean;
   analysisResult: AnalysisResult | null;
   analyzeMarket: () => Promise<void>;
+  hasRequiredTokens: boolean;
+  checkTokenBalance: () => Promise<void>;
   wallet: {
     isConnected: boolean;
     account: string | null;
     chainId: string | null;
     isCorrectNetwork: boolean;
+    tokenBalance: string | null;
     connectWallet: () => Promise<void>;
     disconnectWallet: () => void;
     switchNetwork: () => Promise<void>;
@@ -53,17 +58,35 @@ export const TradingProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [riskLevel, setRiskLevel] = useState(5);
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  const [hasRequiredTokens, setHasRequiredTokens] = useState(false);
   
   const {
     isConnected, 
     account, 
     chainId, 
+    tokenBalance,
     connectWallet, 
     disconnectWallet, 
     switchNetwork
   } = useWalletConnection();
   
   const isCorrectNetwork = chainId === '595973'; // KITTYVERSE chainId
+  
+  // Check if user has enough tokens
+  const checkTokenBalance = async () => {
+    if (isConnected && isCorrectNetwork && tokenBalance) {
+      const requiredBalance = ethers.formatEther(REQUIRED_TOKEN_BALANCE);
+      const userBalance = parseFloat(tokenBalance);
+      setHasRequiredTokens(userBalance >= parseFloat(requiredBalance));
+    } else {
+      setHasRequiredTokens(false);
+    }
+  };
+  
+  // Run token check when wallet state changes
+  useEffect(() => {
+    checkTokenBalance();
+  }, [isConnected, isCorrectNetwork, tokenBalance]);
   
   const analyzeMarket = async () => {
     // Eğer cüzdan bağlı değilse veya doğru ağda değilse uyarı göster
@@ -80,6 +103,15 @@ export const TradingProvider: React.FC<{ children: ReactNode }> = ({ children })
       toast({
         title: "Wrong Network",
         description: "Please switch to KITTYVERSE network to analyze the market",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!hasRequiredTokens) {
+      toast({
+        title: "Insufficient KITTY Tokens",
+        description: "You need at least 1 KITTY token to use KittySignals AI",
         variant: "destructive",
       });
       return;
@@ -119,11 +151,14 @@ export const TradingProvider: React.FC<{ children: ReactNode }> = ({ children })
         analyzing,
         analysisResult,
         analyzeMarket,
+        hasRequiredTokens,
+        checkTokenBalance,
         wallet: {
           isConnected,
           account,
           chainId,
           isCorrectNetwork,
+          tokenBalance,
           connectWallet,
           disconnectWallet,
           switchNetwork

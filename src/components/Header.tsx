@@ -10,7 +10,7 @@ const Header = () => {
       <div className="container mx-auto flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600"></div>
-          <span className="text-xl font-bold">CryptoSignalAI</span>
+          <span className="text-xl font-bold">KittySignals AI</span>
         </div>
         
         <div className="flex items-center">
